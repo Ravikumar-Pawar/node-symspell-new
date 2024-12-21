@@ -26,40 +26,25 @@ This library uses the `iter-tools` and `difflib` modules which are Javascript po
 
 ```js
 
-const  SymSpell = require('node-symspell')
-//import  SymSpell, { Verbosity } from  './index.js'
-//node js compatible
- //check `example.js` for more dtails 
+import SymSpell, { Verbosity } from './index.js'
 
-const  maxEditDistance = 2
+const maxEditDistance = 2
+const prefixLength = 7
+const symSpell = new SymSpell(maxEditDistance, prefixLength)
 
-const  prefixLength = 7
 
-const  symSpell = new  SymSpell(maxEditDistance, prefixLength)
+const dictionaryPath = './dictionaries/frequency_dictionary_en_82_765.txt' // for spelling correction (genuine English words)
+const bigramPath = './dictionaries/frequency_bigramdictionary_en_243_342.txt'
 
-await  symSpell.loadDictionary(dictionaryPath, 0, 1)
 
-await  symSpell.loadBigramDictionary(bigramPath, 0, 2)
 
-  
+await symSpell.loadDictionary(dictionaryPath, 0, 1)
+await symSpell.loadBigramDictionary(bigramPath, 0, 2)
 
-const  typo = 'Can yu readthis messa ge despite thehorible sppelingmsitakes'
-
-const  results = symSpell.lookupCompound(typo, maxEditDistance)
-
-  
+const typo = 'Can yu readthis messa ge despite thehorible sppelingmsitakes'
+const results = symSpell.lookupCompound(typo, maxEditDistance)
 
 console.log(results[0])
-
-// {
-
-// term: 'can you read this message despite the horrible spelling mistakes',
-
-// distance: 10,
-
-// count: 0
-
-// }
 
 ```
 
