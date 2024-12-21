@@ -1,87 +1,108 @@
-# node-symspell
+# Enhanced Node-SymSpell
 
-JavaScript port of SymSpell 6.6 based on the [original C# version by Wolf Garde](https://github.com/wolfgarbe/SymSpell) and the [Python version by mammothb](https://github.com/mammothb/symspellpy).
+An enhanced and optimized version of **node-symspell**, a JavaScript port of **SymSpell 6.6**, originally developed by [Mathieu Loutre](https://github.com/MathieuLoutre/node-symspell), based on the [C# version by Wolf Garbe](https://github.com/wolfgarbe/SymSpell) and the [Python version by mammothb](https://github.com/mammothb/symspellpy).
 
-  
+This project improves upon the original by adding new features, optimizing the codebase, and ensuring compatibility with modern environments.
 
-Just like the Python version, this cuts out some of the C# memory optimisation which aren't really relevant in JavaScript. As a result, this port is not optimised for speed, though it's still quite fast.
+---
 
-  
+## Features
 
-This version also includes the additions of the Python version such as the `ignoreToken` and `transferCasing` options. The unit tests provided are those of the Python version which are much more comprehensive than the original ones.
+### Key Enhancements:
+1. **Node.js 22 Compatibility**:  
+   - Updated the code to run seamlessly in Node.js 22 and newer.
 
-  
+2. **Modular Imports**:  
+   - Refactored to support ES module imports, enabling cleaner, modern usage patterns.
 
-This library uses the `iter-tools` and `difflib` modules which are Javascript ports of the Python modules with similar names. Because it uses async/await and async generators, it needs at least Node 12.x.
+3. **Updated Helper Methods**:  
+   - Improved and streamlined helper methods for easier integration.
 
-  
+4. **New Dependency Versions**:  
+   - Replaced older dependencies with newer, more efficient, and secure libraries.
 
-**NOTE: this is still a work in progress and the API is likely to change**
+5. **Thorough Testing**:  
+   - Validated with local test cases to ensure stability and correctness.
 
-  
+---
+
+## Installation
+
+You can install this package using npm:
+
+```bash
+npm install node-symspell-new
+```
+
+---
 
 ## Basic Example
 
-  
-
-```js
-
-import SymSpell, { Verbosity } from './index.js'
+```javascript
+import SymSpell, { Verbosity } from 'enhanced-node-symspell'
 
 const maxEditDistance = 2
 const prefixLength = 7
 const symSpell = new SymSpell(maxEditDistance, prefixLength)
 
-
-const dictionaryPath = './dictionaries/frequency_dictionary_en_82_765.txt' // for spelling correction (genuine English words)
+const dictionaryPath = './dictionaries/frequency_dictionary_en_82_765.txt'
 const bigramPath = './dictionaries/frequency_bigramdictionary_en_243_342.txt'
 
-
-
+// Load dictionaries
 await symSpell.loadDictionary(dictionaryPath, 0, 1)
 await symSpell.loadBigramDictionary(bigramPath, 0, 2)
 
+// Input text with typos
 const typo = 'Can yu readthis messa ge despite thehorible sppelingmsitakes'
 const results = symSpell.lookupCompound(typo, maxEditDistance)
 
+// Output the corrected sentence
 console.log(results[0])
-
 ```
 
-  
+---
 
-## Main API overview
+## API Overview
 
-  
+### Constructor
 
-`constructor (maxDictionaryEditDistance = 2, prefixLength = 7, countThreshold = 1)`
+```javascript
+new SymSpell(maxDictionaryEditDistance = 2, prefixLength = 7, countThreshold = 1)
+```
+- Initializes the SymSpell object.
 
-  
+### Methods
 
-`async loadDictionary (dictFile, termIndex, countIndex, separator = ' ')`
+1. **Load Dictionaries**:
+   - `async loadDictionary(dictFile, termIndex, countIndex, separator = ' ')`
+   - `async loadBigramDictionary(dictFile, termIndex, countIndex, separator = ' ')`
 
-  
+2. **Lookup Functions**:
+   - `lookup(input, verbosity, maxEditDistance = null, options = {})`
+   - `lookupCompound(input, maxEditDistance = null, options = {})`
+   - `wordSegmentation(input, options = {})`
 
-`async loadBigramDictionary (dictFile, termIndex, countIndex, separator = ' ')`
+---
 
-  
+## Testing
 
-`lookup (input, verbosity, maxEditDistance = null, { includeUnknown, ignoreToken, transferCasing } = {})`
+Run the included test cases to ensure the library is functioning correctly:
 
-  
+```bash
+npm run test
+```
 
-`lookupCompound (input, maxEditDistance = null, { ignoreNonWords, transferCasing } = {})`
+---
 
-  
+## Credits
 
-`wordSegmentation (input, { maxEditDistance = null, maxSegmentationWordLength = null, ignoreToken } = {})`
+This library is built upon the work of:
+- [Mathieu Loutre](https://github.com/MathieuLoutre/node-symspell) (Original Node.js port).
+- [Wolf Garbe](https://github.com/wolfgarbe/SymSpell) (C# SymSpell).
+- [Mammothb](https://github.com/mammothb/symspellpy) (Python SymSpell).
 
-  
+---
 
-## References
+## License
 
-  
-
-https://github.com/wolfgarbe/SymSpell
-
-https://github.com/mammothb/symspellpy
+MIT License
