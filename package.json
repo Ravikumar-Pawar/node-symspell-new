@@ -1,6 +1,7 @@
 {
   "name": "node-symspell-new",
   "version": "0.1.0",
+  "description": "Enhanced version of node-symspell with Node.js 22+ support, modular imports, and modern updates.",
   "scripts": {
     "test": "lab -l -m 0",
     "test-cov": "lab -l -t 90 -m 0 -r html -o coverage.html",
@@ -21,5 +22,11 @@
     "@hapi/code": "^8.0.0",
     "@hapi/lab": "^25.0.0",
     "eslint": "^9.11.1"
+  },
+  "author": "Ravikumar Pawar <ravi.ravipawar17@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ravikumar-Pawar/node-symspell-new.git"
   }
 }
