@@ -226,6 +226,49 @@ class SymSpell {
 		return true
 	}
 
+
+	// React-compatible: Assumes `dictFile` is a file content string loaded beforehand
+	async loadBigramDictionaryReact(fileContent, termIndex, countIndex, separator = ' ') {
+		const lines = fileContent.split('\n'); // Split file content into lines
+
+		for (const line of lines) {
+			const linePartsLength = separator === ' ' ? 3 : 2;
+			const lineParts = line.trim().split(separator);
+
+			if (lineParts.length >= linePartsLength) {
+				const key = separator === ' ' ? `${lineParts[termIndex]} ${lineParts[termIndex + 1]}` : lineParts[termIndex];
+				const count = parseInt(lineParts[countIndex], 10);
+				this.bigrams.set(key, count);
+
+				if (count < this.bigramCountMin) {
+					this.bigramCountMin = count;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	async loadDictionaryReact(fileContent, termIndex, countIndex, separator = ' ') {
+		// Split the file content into lines
+		const lines = fileContent.split('\n');
+
+		for (const line of lines) {
+			const lineParts = line.trim().split(separator);
+
+			if (lineParts.length >= 2) {
+				const key = lineParts[termIndex];
+				const count = parseInt(lineParts[countIndex], 10);
+
+				// Add the key and count to the dictionary
+				this.createDictionaryEntry(key, count);
+			}
+		}
+
+		return true;
+	}
+
+
 	// Find suggested spellings for a given input word.
 	// input: The word being spell checked.
 	// verbosity: The value controlling the quantity/closeness of the retuned suggestions.
