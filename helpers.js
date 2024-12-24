@@ -354,7 +354,6 @@ export default {
 	parseWordsCase,
 	transferCasingMatching,
 	transferCasingSimilar,
-	transferCasingSimilarNode,
 	nullDistanceResults,
 	prefixSuffixPrep
 }

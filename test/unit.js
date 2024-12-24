@@ -91,7 +91,7 @@ experiment('symspell', () => {
 	// 	expect(transferCasingSimilarNode(textWCasing, textWoCasing)).to.equal(textWoCasingTransferred)
 	// })
 
-	it('testTransferCasingForSimilarTextNode', () => {
+	it('testTransferCasingForSimilarText', () => {
 		const textWCasing = 'Haaw is the weeather in New York?'
 		const textWoCasing = 'how is the weather in new york?'
 		const textWoCasingTransferred = 'How is the weather in New York?'
