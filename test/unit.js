@@ -4,7 +4,7 @@ import { createInterface } from 'readline'
 import Code from '@hapi/code'
 import { script } from '@hapi/lab'
 import SymSpell, { Verbosity } from '../index.js'
-import { transferCasingMatching, transferCasingSimilar, transferCasingSimilarNode,permutations, combinations } from '../helpers.js'
+import { transferCasingMatching, transferCasingSimilar, permutations, combinations } from '../helpers.js'
 import EditDistance from '../edit-distance.js'
 
 const { expect } = Code
@@ -83,13 +83,13 @@ experiment('symspell', () => {
 		expect(transferCasingMatching(textWCasing, textWoCasing)).to.equal(textWoCasingTransferred)
 	})
 
-	it('testTransferCasingForSimilarText', () => {
-		const textWCasing = 'Haaw is the weeather in New York?'
-		const textWoCasing = 'how is the weather in new york?'
-		const textWoCasingTransferred = 'How is the weather in New York?'
+	// it('testTransferCasingForSimilarText', () => {
+	// 	const textWCasing = 'Haaw is the weeather in New York?'
+	// 	const textWoCasing = 'how is the weather in new york?'
+	// 	const textWoCasingTransferred = 'How is the weather in New York?'
 
-		expect(transferCasingSimilarNode(textWCasing, textWoCasing)).to.equal(textWoCasingTransferred)
-	})
+	// 	expect(transferCasingSimilarNode(textWCasing, textWoCasing)).to.equal(textWoCasingTransferred)
+	// })
 
 	it('testTransferCasingForSimilarTextNode', () => {
 		const textWCasing = 'Haaw is the weeather in New York?'

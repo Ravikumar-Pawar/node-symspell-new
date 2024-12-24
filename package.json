@@ -14,6 +14,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
+    "diff": "^7.0.0",
     "difflib": "^0.2.4",
     "iter-tools": "^7.5.3"
   },

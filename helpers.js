@@ -1,4 +1,4 @@
-import { SequenceMatcher } from 'difflib'
+//import { SequenceMatcher } from 'difflib'
 import { zip, zipAll } from 'iter-tools'
 
 import { diffChars } from 'diff';
@@ -71,131 +71,131 @@ export const transferCasingMatching = (textWithCasing, textWithoutCasing) => {
 	}).join('')
 }
 
-export const transferCasingSimilarNode = (textWithCasing, textWithoutCasing) => {
-	// Transferring the casing from one text to another - for similar (not matching) text
-	// 1. It will use `difflib`'s `SequenceMatcher` to identify the
-	//    different type of changes needed to turn `textWithCasing` into
-	//    `textWithoutCasing`
-	// 2. For each type of change:
-	//    - for inserted sections:
-	//      - it will transfer the casing from the prior character
-	//      - if no character before or the character before is the\
-	//        space, then it will transfer the casing from the following\
-	//        character
-	//    - for deleted sections: no case transfer is required
-	//    - for equal sections: just swap out the text with the original,\
-	//      the one with the casings, as otherwise the two are the same
-	//    - replaced sections: transfer the casing using\
-	//      :meth:`transfer_casing_for_matching_text` if the two has the\
-	//      same length, otherwise transfer character-by-character and\
-	//      carry the last casing over to any additional characters.
-	// Parameters
-	// ----------
-	// textWithCasing : str
-	//     Text with varied casing
-	// textWithoutCasing : str
-	//     Text that is in lowercase only
-	// Returns
-	// -------
-	// textWithoutCasing : str
-	//     If `textWithoutCasing` is empty
-	// c : str
-	//     Text with the content of `textWithoutCasing` but the casing of
-	//     `textWithCasing`
-	// Raises
-	// ------
-	// ValueError
-	//     If `textWithCasing` is empty
-	// """
+// export const transferCasingSimilarNode = (textWithCasing, textWithoutCasing) => {
+// 	// Transferring the casing from one text to another - for similar (not matching) text
+// 	// 1. It will use `difflib`'s `SequenceMatcher` to identify the
+// 	//    different type of changes needed to turn `textWithCasing` into
+// 	//    `textWithoutCasing`
+// 	// 2. For each type of change:
+// 	//    - for inserted sections:
+// 	//      - it will transfer the casing from the prior character
+// 	//      - if no character before or the character before is the\
+// 	//        space, then it will transfer the casing from the following\
+// 	//        character
+// 	//    - for deleted sections: no case transfer is required
+// 	//    - for equal sections: just swap out the text with the original,\
+// 	//      the one with the casings, as otherwise the two are the same
+// 	//    - replaced sections: transfer the casing using\
+// 	//      :meth:`transfer_casing_for_matching_text` if the two has the\
+// 	//      same length, otherwise transfer character-by-character and\
+// 	//      carry the last casing over to any additional characters.
+// 	// Parameters
+// 	// ----------
+// 	// textWithCasing : str
+// 	//     Text with varied casing
+// 	// textWithoutCasing : str
+// 	//     Text that is in lowercase only
+// 	// Returns
+// 	// -------
+// 	// textWithoutCasing : str
+// 	//     If `textWithoutCasing` is empty
+// 	// c : str
+// 	//     Text with the content of `textWithoutCasing` but the casing of
+// 	//     `textWithCasing`
+// 	// Raises
+// 	// ------
+// 	// ValueError
+// 	//     If `textWithCasing` is empty
+// 	// """
 
-	const _sm = new SequenceMatcher(null, textWithCasing.toLowerCase(), textWithoutCasing)
+// 	const _sm = new SequenceMatcher(null, textWithCasing.toLowerCase(), textWithoutCasing)
 
-	// we will collect the case_text:
-	let c = ''
+// 	// we will collect the case_text:
+// 	let c = ''
 
-	// get the operation codes describing the differences between the
-	// two strings and handle them based on the per operation code rules
-	_sm.getOpcodes().forEach(([tag, i1, i2, j1, j2]) => {
-		// Print the operation codes from the SequenceMatcher:
-		// print('{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'
-		//   .format(tag, i1, i2, j1, j2,
-		//   textWithCasing.slice(j1, j2),
-		//   textWithoutCasing[j1:j2]))
+// 	// get the operation codes describing the differences between the
+// 	// two strings and handle them based on the per operation code rules
+// 	_sm.getOpcodes().forEach(([tag, i1, i2, j1, j2]) => {
+// 		// Print the operation codes from the SequenceMatcher:
+// 		// print('{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'
+// 		//   .format(tag, i1, i2, j1, j2,
+// 		//   textWithCasing.slice(j1, j2),
+// 		//   textWithoutCasing[j1:j2]))
 
-		// inserted character(s)
-		if (tag === 'insert') {
-			// if this is the first character and so there is no
-			// character on the left of this or the left of it a space
-			// then take the casing from the following character
+// 		// inserted character(s)
+// 		if (tag === 'insert') {
+// 			// if this is the first character and so there is no
+// 			// character on the left of this or the left of it a space
+// 			// then take the casing from the following character
 
-			if (i1 === 0 || textWithCasing[i1 - 1] === ' ') {
-				if (textWithCasing[i1] && textWithCasing[i1].toUpperCase() === textWithCasing[i1]) {
-					c += textWithoutCasing.slice(j1, j2).toUpperCase()
-				}
-				else {
-					c += textWithoutCasing.slice(j1, j2).toLowerCase()
-				}
-			}
-			else {
-				// otherwise just take the casing from the prior
-				// character
-				if (textWithCasing[i1 - 1].toUpperCase() === textWithCasing[i1 - 1]) {
-					c += textWithoutCasing.slice(j1, j2).toUpperCase()
-				}
-				else {
-					c += textWithoutCasing.slice(j1, j2).toLowerCase()
-				}
-			}
-		}
-		else if (tag === 'equal') {
-			// for 'equal' we just transfer the text from the
-			// textWithCasing, as anyhow they are equal (without the
-			// casing)
-			c += textWithCasing.slice(i1, i2)
-		}
-		else if (tag === 'replace') {
-			const _withCasing = textWithCasing.slice(i1, i2)
-			const _withoutCasing = textWithoutCasing.slice(j1, j2)
+// 			if (i1 === 0 || textWithCasing[i1 - 1] === ' ') {
+// 				if (textWithCasing[i1] && textWithCasing[i1].toUpperCase() === textWithCasing[i1]) {
+// 					c += textWithoutCasing.slice(j1, j2).toUpperCase()
+// 				}
+// 				else {
+// 					c += textWithoutCasing.slice(j1, j2).toLowerCase()
+// 				}
+// 			}
+// 			else {
+// 				// otherwise just take the casing from the prior
+// 				// character
+// 				if (textWithCasing[i1 - 1].toUpperCase() === textWithCasing[i1 - 1]) {
+// 					c += textWithoutCasing.slice(j1, j2).toUpperCase()
+// 				}
+// 				else {
+// 					c += textWithoutCasing.slice(j1, j2).toLowerCase()
+// 				}
+// 			}
+// 		}
+// 		else if (tag === 'equal') {
+// 			// for 'equal' we just transfer the text from the
+// 			// textWithCasing, as anyhow they are equal (without the
+// 			// casing)
+// 			c += textWithCasing.slice(i1, i2)
+// 		}
+// 		else if (tag === 'replace') {
+// 			const _withCasing = textWithCasing.slice(i1, i2)
+// 			const _withoutCasing = textWithoutCasing.slice(j1, j2)
 
-			// if they are the same length, the transfer is easy
-			if (_withCasing.length === _withoutCasing.length) {
-				c += transferCasingMatching(_withCasing, _withoutCasing)
-			}
-			else {
-				// if the replaced has a different length, then we
-				// transfer the casing character-by-character and using
-				// the last casing to continue if we run out of the
-				// sequence
-				let _last = 'lower'
+// 			// if they are the same length, the transfer is easy
+// 			if (_withCasing.length === _withoutCasing.length) {
+// 				c += transferCasingMatching(_withCasing, _withoutCasing)
+// 			}
+// 			else {
+// 				// if the replaced has a different length, then we
+// 				// transfer the casing character-by-character and using
+// 				// the last casing to continue if we run out of the
+// 				// sequence
+// 				let _last = 'lower'
 
-				for (const [w, wo] of zipAll(_withCasing, _withoutCasing)) {
-					if (w && wo) {
-						if (w === w.toUpperCase()) {
-							c += wo.toUpperCase()
-							_last = 'upper'
-						}
-						else {
-							c += wo.toLowerCase()
-							_last = 'lower'
-						}
-					}
-					else if (!w && wo) {
-						// once we ran out of 'w', we will carry over
-						// the last casing to any additional 'wo'
-						// characters
-						c += _last === 'upper' ? wo.toUpperCase() : wo.toLowerCase()
-					}
-				}
-			}
-		}
-		// else if (tag === 'delete') {
-		//     // for deleted characters we don't need to do anything
-		//     continue
-		// }
-	})
+// 				for (const [w, wo] of zipAll(_withCasing, _withoutCasing)) {
+// 					if (w && wo) {
+// 						if (w === w.toUpperCase()) {
+// 							c += wo.toUpperCase()
+// 							_last = 'upper'
+// 						}
+// 						else {
+// 							c += wo.toLowerCase()
+// 							_last = 'lower'
+// 						}
+// 					}
+// 					else if (!w && wo) {
+// 						// once we ran out of 'w', we will carry over
+// 						// the last casing to any additional 'wo'
+// 						// characters
+// 						c += _last === 'upper' ? wo.toUpperCase() : wo.toLowerCase()
+// 					}
+// 				}
+// 			}
+// 		}
+// 		// else if (tag === 'delete') {
+// 		//     // for deleted characters we don't need to do anything
+// 		//     continue
+// 		// }
+// 	})
 
-	return c
-}
+// 	return c
+// }
 
 /**
  * Transfers the casing from a reference text (`textWithCasing`) to a target text (`textWithoutCasing`).
