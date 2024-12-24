@@ -1,6 +1,6 @@
 {
   "name": "node-symspell-new",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Enhanced version of node-symspell with Node.js 22+ support, modular imports, and modern updates.",
   "scripts": {
     "test": "lab -l -m 0",
