@@ -1,6 +1,7 @@
 import { SequenceMatcher } from 'difflib'
-import { zip,zipAll } from 'iter-tools'
+import { zip, zipAll } from 'iter-tools'
 
+import { diffChars } from 'diff';
 //const { zip, zipAll } = itertools
 
 export const isAcronym = (word) => {
@@ -70,7 +71,7 @@ export const transferCasingMatching = (textWithCasing, textWithoutCasing) => {
 	}).join('')
 }
 
-export const transferCasingSimilar = (textWithCasing, textWithoutCasing) => {
+export const transferCasingSimilarNode = (textWithCasing, textWithoutCasing) => {
 	// Transferring the casing from one text to another - for similar (not matching) text
 	// 1. It will use `difflib`'s `SequenceMatcher` to identify the
 	//    different type of changes needed to turn `textWithCasing` into
@@ -196,6 +197,81 @@ export const transferCasingSimilar = (textWithCasing, textWithoutCasing) => {
 	return c
 }
 
+/**
+ * Transfers the casing from a reference text (`textWithCasing`) to a target text (`textWithoutCasing`).
+ * This function is compatible with both Node.js and browser environments.
+ *
+ * It uses the `diffChars` method from the `diff` library to determine differences between the two texts
+ * and applies casing transformations accordingly:
+ * - For inserted sections, casing is inferred from context or the reference text.
+ * - For matching sections, the casing is preserved from the reference text.
+ * - For removed sections, no changes are made.
+ *
+ * @param {string} textWithCasing - The reference text with original casing.
+ * @param {string} textWithoutCasing - The target text where casing needs to be applied.
+ * @returns {string} The target text with casing applied based on the reference text.
+ *
+ * Compatibility:
+ * - Node.js: Requires the `diff` library, installable via `npm install diff`.
+ * - Web: Include the `diff` library through a bundler or CDN (e.g., https://cdn.jsdelivr.net/npm/diff).
+ *
+ * Usage:
+ * - Node.js:
+ *   const { diffChars } = require('diff');
+ *   const result = transferCasingSimilarWeb("HeLLo World", "hello earth");
+ *   console.log(result);
+ * - Browser:
+ *   Include the `diff` library via a <script> tag, and call this function with the required arguments.
+ */
+export const transferCasingSimilar = (textWithCasing, textWithoutCasing) => {
+	const diffs = diffChars(textWithCasing.toLowerCase(), textWithoutCasing.toLowerCase());
+
+	let result = '';
+	let i1 = 0; // Index for textWithCasing
+
+	const isUpperCase = (word) => word === word.toUpperCase() && word !== word.toLowerCase();
+	const isMixedCase = (word) => word !== word.toUpperCase() && word !== word.toLowerCase();
+	const isLowerCase = (word) => word === word.toLowerCase();
+
+	diffs.forEach((part) => {
+		if (!part.added && !part.removed) {
+			// Equal sections: Copy directly from textWithCasing
+			result += textWithCasing.slice(i1, i1 + part.value.length);
+			i1 += part.value.length;
+		} else if (part.removed) {
+			// Deleted sections: Move index in textWithCasing
+			i1 += part.value.length;
+		} else if (part.added) {
+			// Handle inserted text
+			const words = part.value.split(/(\s+)/);  // Split by spaces
+			words.forEach((word) => {
+				if (/\s+/.test(word)) {
+					result += word;  // If it's whitespace, keep it unchanged
+				} else {
+					const originalWordIndex = textWithCasing.toLowerCase().indexOf(word.toLowerCase(), i1);
+					const originalWord = originalWordIndex !== -1 ? textWithCasing.slice(originalWordIndex, originalWordIndex + word.length) : '';
+					const precedingChar = result.slice(-1);  // Last character in the result
+
+					// Handle casing based on the context
+					if (isUpperCase(originalWord)) {
+						result += word.toUpperCase();
+					} else if (isMixedCase(originalWord)) {
+						result += originalWord; // Keep original mixed casing
+					} else if (isLowerCase(word)) {
+						result += word.toLowerCase();
+					} else if (isUpperCase(precedingChar) || result.endsWith('.')) {
+						result += word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();  // Capitalize after punctuation
+					} else {
+						result += word.toLowerCase();
+					}
+				}
+			});
+		}
+	});
+
+	return result;
+};
+
 /// <summary>Determines the proper return value of an edit distance function when one or
 /// both strings are null.</summary>
 export const nullDistanceResults = (string1, string2, maxDistance) => {
@@ -237,47 +313,48 @@ export const prefixSuffixPrep = (string1, string2) => {
 // permutations.js
 export function permutations(arr) {
 	const results = [];
-	
+
 	if (arr.length === 0) return [];
 	if (arr.length === 1) return [arr];
-	
-	for (let i = 0; i < arr.length; i++) {
-	  const current = arr[i];
-	  const remaining = arr.slice(0, i).concat(arr.slice(i + 1));
-	  const remainingPerms = permutations(remaining);
-	  
-	  for (let perm of remainingPerms) {
-		results.push([current, ...perm]);
-	  }
-	}
-	
-	return results;
-  }
 
-  // combinations.js
+	for (let i = 0; i < arr.length; i++) {
+		const current = arr[i];
+		const remaining = arr.slice(0, i).concat(arr.slice(i + 1));
+		const remainingPerms = permutations(remaining);
+
+		for (let perm of remainingPerms) {
+			results.push([current, ...perm]);
+		}
+	}
+
+	return results;
+}
+
+// combinations.js
 export function combinations(arr, length) {
 	const results = [];
-	
+
 	function combine(start, combo) {
-	  if (combo.length === length) {
-		results.push(combo);
-		return;
-	  }
-	  
-	  for (let i = start; i < arr.length; i++) {
-		combine(i + 1, combo.concat(arr[i]));
-	  }
+		if (combo.length === length) {
+			results.push(combo);
+			return;
+		}
+
+		for (let i = start; i < arr.length; i++) {
+			combine(i + 1, combo.concat(arr[i]));
+		}
 	}
-	
+
 	combine(0, []);
 	return results;
-  }
-  
+}
+
 export default {
 	isAcronym,
 	parseWordsCase,
 	transferCasingMatching,
 	transferCasingSimilar,
+	transferCasingSimilarNode,
 	nullDistanceResults,
 	prefixSuffixPrep
 }
