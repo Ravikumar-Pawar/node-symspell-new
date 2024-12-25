@@ -452,7 +452,7 @@ async createDictionaryClientSide(dictFile) {
 				const count = parseInt(lineParts[countIndex], 10);
 
 				// Add the key and count to the dictionary
-				this.createDictionaryEntry(key, count);
+				this.createDictionaryEntryClientSide(key, count);
 			}
 		}
 
