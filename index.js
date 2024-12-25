@@ -1,5 +1,5 @@
-import { createReadStream } from 'fs'
-import { createInterface } from 'readline'
+// import { createReadStream } from 'fs'
+// import { createInterface } from 'readline'
 import EditDistance from './edit-distance.js'
 import { transferCasingSimilar, parseWordsCase, isAcronym } from './helpers.js'
 
@@ -70,160 +70,184 @@ class SymSpell {
 		this.bigramCountMin = Number.MAX_SAFE_INTEGER
 	}
 
-	// Create/Update an entry in the dictionary.
-	// For every word there are deletes with an edit distance of 1..maxEditDistance created and added to the
-	// dictionary. Every delete entry has a suggestions list, which points to the original term(s) it was created from.
-	// The dictionary may be dynamically updated (word frequency and new words) at any time by calling createDictionaryEntry
-	// key: The word to add to dictionary.
-	// count: The frequency count for word.
-	// staging: Optional staging object to speed up adding many entries by staging them to a temporary structure.
-	// returns -> True if the word was added as a new correctly spelled word, or false if the word is added as a below threshold word, or updates an existing correctly spelled word.
+	/**
+	 * Creates or updates an entry in the dictionary.
+	 * 
+	 * This function handles the logic for adding a word to the dictionary with its frequency count.
+	 * It checks if the word is below a certain threshold and promotes it to the correct word list
+	 * if its count reaches the threshold. Additionally, it creates deletion suggestions based on 
+	 * the word's edit distance and stores them in the dictionary.
+	 *
+	 * @param {string} key - The word to add or update in the dictionary.
+	 * @param {number} count - The frequency count of the word.
+	 * @param {object} [staging] - An optional staging object to batch entries before adding them to the dictionary.
+	 * @returns {boolean} - Returns `true` if the word is added as a new correctly spelled word,
+	 *                      or `false` if the word is below the threshold or updates an existing word.
+	 */
 	createDictionaryEntry(key, count) {
+		// If count is zero or less, there's no point in doing anything unless the count threshold is zero
 		if (count <= 0) {
-			if (this.countThreshold > 0) return false // no point doing anything if count is zero, as it can't change anything
-			count = 0
+			if (this.countThreshold > 0) return false; // No change if count is zero and threshold is positive
+			count = 0; // Reset to zero if countThreshold is 0
 		}
 
-		let countPrevious = -1
+		let countPrevious = -1;
 
-		// look first in below threshold words, update count, and allow promotion to correct spelling word if count reaches threshold
-		// threshold must be >1 for there to be the possibility of low threshold words
+		// Check if the word is in the below-threshold words map
+		// If it is, update its count and check if it should be promoted to the correct word list
 		if (this.countThreshold > 1 && this.belowThresholdWords.has(key)) {
-			countPrevious = this.belowThresholdWords.get(key)
+			countPrevious = this.belowThresholdWords.get(key);
 
-			// calculate new count for below threshold word
-			count = (Number.MAX_SAFE_INTEGER - countPrevious > count) ? countPrevious + count : Number.MAX_SAFE_INTEGER
+			// Calculate the new count while ensuring it doesn't overflow beyond MAX_SAFE_INTEGER
+			count = (Number.MAX_SAFE_INTEGER - countPrevious > count) ? countPrevious + count : Number.MAX_SAFE_INTEGER;
 
-			// has reached threshold - remove from below threshold collection (it will be added to correct words below)
+			// If the count exceeds the threshold, promote the word to the correct words map
 			if (count >= this.countThreshold) {
-				this.belowThresholdWords.delete(key)
-			}
-			else {
-				this.belowThresholdWords.set(key, count)
-
-				return false
+				this.belowThresholdWords.delete(key); // Remove from below-threshold words
+			} else {
+				this.belowThresholdWords.set(key, count); // Update below-threshold count
+				return false; // No promotion if it didn't reach the threshold
 			}
 		}
+		// If the word is already in the correct words map, just update its count
 		else if (this.words.has(key)) {
-			countPrevious = this.words.get(key)
+			countPrevious = this.words.get(key);
 
-			// just update count if it's an already added above threshold word
-			count = (Number.MAX_SAFE_INTEGER - countPrevious > count) ? countPrevious + count : Number.MAX_SAFE_INTEGER
-			this.words.set(key, count)
+			// Update count for existing word
+			count = (Number.MAX_SAFE_INTEGER - countPrevious > count) ? countPrevious + count : Number.MAX_SAFE_INTEGER;
+			this.words.set(key, count); // Set the updated count
 
-			return false
+			return false; // No new word, just count update
 		}
+		// If the word is below the threshold, add it to the below-threshold words
 		else if (count < this.countThreshold) {
-			// new or existing below threshold word
-			this.belowThresholdWords.set(key, count)
-
-			return false
+			this.belowThresholdWords.set(key, count); // Add word to below-threshold words
+			return false;
 		}
 
-		// what we have at this point is a new, above threshold word
-		this.words.set(key, count)
+		// If we've reached this point, it's a new, above-threshold word
+		this.words.set(key, count); // Add the new word to the correct words list
 
-		// edits/suggestions are created only once, no matter how often word occurs
-		// edits/suggestions are created only as soon as the word occurs in the corpus,
-		// even if the same term existed before in the dictionary as an edit from another word
+		// Track the longest word in the dictionary
 		if (key.length > this.maxDictionaryWordLength) {
-			this.maxDictionaryWordLength = key.length
+			this.maxDictionaryWordLength = key.length;
 		}
 
-		// create deletes
-		const edits = this.editsPrefix(key)
+		// Generate edits/deletions for suggestions (edit distance)
+		const edits = this.editsPrefix(key);
 
-		// put suggestions directly into main data structure
+		// Add deletion suggestions to the dictionary
 		edits.forEach((val, del) => {
 			if (!this.deletes.has(del)) {
-				this.deletes.set(del, [])
+				this.deletes.set(del, []);
 			}
 
-			this.deletes.get(del).push(key)
-		})
+			// Store the original word as a suggestion for the deletion
+			this.deletes.get(del).push(key);
+		});
 
-		return true
+		return true; // Successfully added or updated the word
 	}
 
-	// Load multiple dictionary entries from a file of word/frequency count pairs
-	// Merges with any dictionary data already loaded.
-	// corpus: The path+filename of the file.
-	// termIndex: The column position of the word.
-	// countIndex: The column position of the frequency count.
-	// separator: Separator characters between term(s) and count.
-	// returns ->True if file loaded, or false if file not found.
-	async loadBigramDictionary(dictFile, termIndex, countIndex, separator = ' ') {
-		const lines = createInterface({
-			input: createReadStream(dictFile, 'utf8'),
-			output: process.stdout,
-			terminal: false
-		})
+	/**
+	 * Loads a bigram dictionary from a given data string.
+	 * 
+	 * This function loads bigram data from a provided string. It expects the data to be in the format:
+	 * "term1 term2 count" or "term count" depending on the separator.
+	 * The function updates the `bigrams` map and tracks the minimum bigram count.
+	 *
+	 * @param {string} data - The bigram data in string format.
+	 * @param {number} termIndex - The index of the term(s) in the data.
+	 * @param {number} countIndex - The index of the count in the data.
+	 * @param {string} [separator=' '] - The separator used in the data (default is space).
+	 * @returns {boolean} - Returns `true` if the bigram data was successfully loaded.
+	 */
+	async loadBigramDictionary(data, termIndex, countIndex, separator = ' ') {
+		const lines = data.split('\n'); // Split data into lines
 
-		for await (const line of lines) {
-			const linePartsLength = (separator === ' ') ? 3 : 2
-			const lineParts = line.trim().split(separator)
+		for (const line of lines) {
+			const linePartsLength = (separator === ' ') ? 3 : 2;
+			const lineParts = line.trim().split(separator);
 
+			// Only process lines with sufficient parts
 			if (lineParts.length >= linePartsLength) {
-				// if default (whitespace) is defined as separator take 2 term parts, otherwise take only one
-				const key = (separator === ' ') ? lineParts[termIndex] + ' ' + lineParts[termIndex + 1] : lineParts[termIndex]
-				// Int64 count;
-				const count = parseInt(lineParts[countIndex], 10)
-				this.bigrams.set(key, count)
+				const key = (separator === ' ') ? lineParts[termIndex] + ' ' + lineParts[termIndex + 1] : lineParts[termIndex];
+				const count = parseInt(lineParts[countIndex], 10); // Parse count value
 
+				this.bigrams.set(key, count); // Add to the bigrams map
+
+				// Track minimum bigram count
 				if (count < this.bigramCountMin) {
-					this.bigramCountMin = count
+					this.bigramCountMin = count;
 				}
 			}
 		}
 
-		return true
+		return true;
 	}
 
-	// Load multiple dictionary entries from a file of word/frequency count pairs
-	// Merges with any dictionary data already loaded.
-	// corpus: The path+filename of the file.
-	// termIndex: The column position of the word.
-	// countIndex: The column position of the frequency count.
-	// separator: Separator characters between term(s) and count.
-	// returns ->True if file loaded, or false if file not found.
-	async loadDictionary(dictFile, termIndex, countIndex, separator = ' ') {
-		const lines = createInterface({
-			input: createReadStream(dictFile, 'utf8'),
-			output: process.stdout,
-			terminal: false
-		})
+	/**
+	 * Loads a dictionary from a given data string.
+	 * 
+	 * This function loads dictionary data from a provided string and adds each word to the dictionary
+	 * with its frequency count. It expects the data to be in the format "term count".
+	 *
+	 * @param {string} data - The dictionary data in string format.
+	 * @param {number} termIndex - The index of the term in the data.
+	 * @param {number} countIndex - The index of the count in the data.
+	 * @param {string} [separator=' '] - The separator used in the data (default is space).
+	 * @returns {boolean} - Returns `true` if the dictionary data was successfully loaded.
+	 */
+	async loadDictionary(data, termIndex, countIndex, separator = ' ') {
+		const lines = data.split('\n'); // Split data into lines
 
-		for await (const line of lines) {
-			const lineParts = line.trim().split(separator)
+		for (const line of lines) {
+			const lineParts = line.trim().split(separator); // Split line into parts
 
+			// Only process lines with at least two parts (word and count)
 			if (lineParts.length >= 2) {
-				const key = lineParts[termIndex]
-				const count = parseInt(lineParts[countIndex], 10)
-				this.createDictionaryEntry(key, count)
+				const key = lineParts[termIndex];
+				const count = parseInt(lineParts[countIndex], 10); // Parse count value
+
+				this.createDictionaryEntry(key, count); // Add to the dictionary
 			}
 		}
 
-		return true
+		return true;
 	}
 
-	// Load multiple dictionary words from a file containing plain text.
-	// Merges with any dictionary data already loaded.
-	// corpus: The path+filename of the file.
-	// returns ->True if file loaded, or false if file not found.
+	/**
+	 * Creates a dictionary from a given file by fetching its content.
+	 * 
+	 * This function fetches the dictionary file from a given URL, processes each line, and adds words
+	 * to the dictionary with a default count of 1. It splits the lines into words and adds them to the dictionary.
+	 *
+	 * @param {string} dictFile - The URL of the dictionary file to fetch.
+	 * @returns {boolean} - Returns `true` if the dictionary was successfully created from the file.
+	 */
 	async createDictionary(dictFile) {
-		const lines = createInterface({
-			input: createReadStream(dictFile, 'utf8'),
-			output: process.stdout,
-			terminal: false
-		})
+		try {
+			// Fetch the dictionary file from the URL
+			const response = await fetch(dictFile);
+			const text = await response.text(); // Read the file content as text
+			const lines = text.split('\n');  // Split content by line
 
-		for await (const line of lines) {
-			this.parseWords(line).forEach((key) => {
-				this.createDictionaryEntry(key, 1)
-			})
+			// Process each line
+			for (const line of lines) {
+				// Split each line into words using the parseWords method
+				const words = this.parseWords(line);
+
+				// Add each word to the dictionary with a default count of 1
+				words.forEach((key) => {
+					this.createDictionaryEntry(key, 1);
+				});
+			}
+
+			return true; // Successfully created the dictionary
+		} catch (error) {
+			console.error("Failed to create dictionary:", error); // Log error if the fetch fails
+			return false;
 		}
-
-		return true
 	}
 
 
